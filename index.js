@@ -30,6 +30,58 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(methodOveride('_method'));
 
+
+app.get('/', checkAuthenticated, (req, res) => {
+    res.render('index.ejs', {name: req.user.name} )
+})
+
+app.get('/login', checkNotAuthenticated, (req, res)=> {
+    res.render('login.ejs')
+})
+
+app.get('/register', checkNotAuthenticated, (req, res) => {
+    res.render('register.ejs')
+})
+
+app.post('/login', checkNotAuthenticated,
+passport.authenticate('local', { failureRedirect: '/login', successRedirect: '/' }));
+
+app.post('/register', checkNotAuthenticated, async (req, res) => {
+    try {
+        const hashpassword = await bcrypt.hash(req.body.password, 10);
+        users.push({
+            id: Date.now().toString(),
+            name: req.body.name,
+            email: req.body.email,
+            password: hashpassword
+        })
+        res.redirect('/login');
+    } catch (error) {
+        console.log(error);
+        res.redirect('/register')
+    }
+})
+
+app.delete('/logout', (req, res) => {
+    req.logOut();
+    req.redirect('/login')
+})
+
+function checkAuthenticated(req, res, next){
+    if(req.isAuthenticated()){
+        return next();
+    }
+    return res.redirect('/login');
+}
+
+function checkNotAuthenticated(req, res, next){
+    if(req.isAuthenticated())
+    {
+        return res.redirect('/')
+    }
+    return next();
+}
+
 app.listen(port, function(err){
     if(err){
         console.log(`Error in running the server : ${err}`);
